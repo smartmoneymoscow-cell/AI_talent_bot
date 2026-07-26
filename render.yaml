@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ai-talent-bot
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && pip install fastapi uvicorn[standard] && cd mini_app/frontend && npm install && npm run build && cd ../.."
+    startCommand: "cd mini_app/backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: MINI_APP_URL
+        sync: false
+      - key: PLATFORM_FEE_PERCENT
+        value: "5"
+      - key: DB_PATH
+        value: data/bot.db
