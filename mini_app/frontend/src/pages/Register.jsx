@@ -13,10 +13,15 @@ export function RegisterPage({ onRegistered }) {
   const [error, setError] = useState('');
 
   const tgUser = getTelegramUser();
+  const hasInitData = !!(window.Telegram?.WebApp?.initData);
 
   async function handleSubmit() {
     if (!fullName.trim() || fullName.trim().length < 2) {
       setError('Введите имя (минимум 2 символа)');
+      return;
+    }
+    if (!hasInitData) {
+      setError('Откройте приложение через кнопку в боте @Ai_talents_bot');
       return;
     }
     setError('');
@@ -38,9 +43,12 @@ export function RegisterPage({ onRegistered }) {
     }
   }
 
-  // Quick registration using Telegram data
   async function quickRegister(selectedRole) {
     if (!tgUser) return;
+    if (!hasInitData) {
+      setError('Откройте приложение через кнопку в боте @Ai_talents_bot');
+      return;
+    }
     setRole(selectedRole);
     setFullName(tgUser.full_name);
     setError('');
@@ -88,7 +96,13 @@ export function RegisterPage({ onRegistered }) {
           <p style={{ color: '#e53935', marginBottom: 16, fontSize: 14 }}>{error}</p>
         )}
 
-        {tgUser && (
+        {!hasInitData && (
+          <p style={{ color: '#e53935', marginBottom: 16, fontSize: 13, padding: 12, background: '#e5393522', borderRadius: 8 }}>
+            ⚠️ Откройте приложение через бота @Ai_talents_bot
+          </p>
+        )}
+
+        {tgUser && hasInitData && (
           <>
             <p style={{ fontWeight: 600, marginBottom: 8, fontSize: 14, opacity: 0.7 }}>
               👋 {tgUser.full_name}
@@ -122,7 +136,7 @@ export function RegisterPage({ onRegistered }) {
           </>
         )}
 
-        {!tgUser && (
+        {(!tgUser || !hasInitData) && (
           <>
             <p style={{ fontWeight: 600, marginBottom: 16 }}>Выберите роль:</p>
             <button

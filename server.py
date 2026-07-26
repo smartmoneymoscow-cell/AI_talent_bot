@@ -297,9 +297,11 @@ async def switch_role(user=Depends(get_current_user)):
 @app.post("/api/register")
 async def register_user(data: RegisterUser, x_telegram_init_data: str = Header(alias="X-Telegram-Init-Data")):
     """Register a new user via Mini App."""
+    if not x_telegram_init_data or not x_telegram_init_data.strip():
+        raise HTTPException(400, "Откройте приложение через кнопку в боте")
     user_data = validate_init_data(x_telegram_init_data)
     if not user_data:
-        raise HTTPException(401, "Invalid initData")
+        raise HTTPException(400, "Данные Telegram невалидны. Откройте приложение через бота заново.")
     if data.role not in ("employer", "specialist"):
         raise HTTPException(400, "Invalid role")
     if len(data.full_name) < 2:
