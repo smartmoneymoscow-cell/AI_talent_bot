@@ -9,15 +9,33 @@ export function AppProvider({ children }) {
   const [tgUser, setTgUser] = useState(null);
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
+    // Initialize Telegram WebApp
+    try {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+      }
+    } catch (e) {
+      console.warn('Telegram WebApp init failed:', e);
     }
+
     // Get Telegram user data for quick registration
-    const tUser = getTelegramUser();
-    setTgUser(tUser);
-    loadUser();
+    try {
+      const tUser = getTelegramUser();
+      setTgUser(tUser);
+    } catch (e) {
+      console.warn('getTelegramUser failed:', e);
+    }
+
+    // Load user from API with timeout
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
+    loadUser().finally(() => clearTimeout(timeout));
+
+    return () => clearTimeout(timeout);
   }, []);
 
   async function loadUser() {
@@ -33,7 +51,7 @@ export function AppProvider({ children }) {
   }
 
   function refreshUser() {
-    return api.getMe().then(setUser);
+    return api.getMe().then(setUser).catch(() => setUser(null));
   }
 
   if (loading) {

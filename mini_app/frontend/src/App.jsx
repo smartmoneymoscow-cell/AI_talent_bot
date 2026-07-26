@@ -29,6 +29,48 @@ const employerTabs = [
   { key: 'profile', label: 'Профиль', icon: '👤', page: EmployerProfilePage },
 ];
 
+// Error boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          height: '100vh', padding: 24, textAlign: 'center',
+          background: 'var(--tg-theme-bg-color, #fff)',
+          color: 'var(--tg-theme-text-color, #000)',
+        }}>
+          <div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+            <h2 style={{ margin: '0 0 8px' }}>Ошибка загрузки</h2>
+            <p style={{ opacity: 0.6, fontSize: 14 }}>
+              {this.state.error?.message || 'Попробуйте перезапустить приложение'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                marginTop: 16, padding: '12px 24px', borderRadius: 12,
+                border: 'none', background: '#3390ec', color: '#fff',
+                cursor: 'pointer', fontSize: 15,
+              }}
+            >
+              🔄 Перезагрузить
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const { user, loading, loadUser } = useApp();
   const [activeTab, setActiveTab] = React.useState('orders');
@@ -73,66 +115,68 @@ export default function App() {
     : '#f4f4f5';
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: bgColor,
-      color: textColor,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      paddingBottom: 70,
-      '--tg-theme-bg-color': bgColor,
-      '--tg-theme-text-color': textColor,
-      '--tg-theme-button-color': btnColor,
-      '--tg-theme-secondary-bg-color': secBgColor,
-      '--tg-theme-hint-color': '#999999',
-    }}>
-      {/* Заголовок */}
+    <ErrorBoundary>
       <div style={{
-        padding: '12px 16px', borderBottom: `1px solid ${secBgColor}`,
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <span style={{ fontSize: 20 }}>🤖</span>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>AI Talent Hub</span>
-        <span style={{
-          marginLeft: 'auto', fontSize: 12, padding: '2px 8px',
-          borderRadius: 8, background: btnColor + '22', color: btnColor,
-        }}>
-          {user.role === 'employer' ? '🏢 Предприниматель' : '🧠 Специалист'}
-        </span>
-      </div>
-
-      {/* Контент */}
-      <PageComponent />
-
-      {/* Нижняя навигация */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
+        minHeight: '100vh',
         background: bgColor,
-        borderTop: `1px solid ${secBgColor}`,
-        display: 'flex', padding: '8px 0',
-        paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+        color: textColor,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        paddingBottom: 70,
+        '--tg-theme-bg-color': bgColor,
+        '--tg-theme-text-color': textColor,
+        '--tg-theme-button-color': btnColor,
+        '--tg-theme-secondary-bg-color': secBgColor,
+        '--tg-theme-hint-color': '#999999',
       }}>
-        {tabs.map(tab => {
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                flex: 1, background: 'none', border: 'none',
-                cursor: 'pointer', padding: '6px 0',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                color: isActive ? btnColor : textColor,
-                opacity: isActive ? 1 : 0.5,
-              }}
-            >
-              <span style={{ fontSize: 22 }}>{tab.icon}</span>
-              <span style={{ fontSize: 11, fontWeight: isActive ? 600 : 400 }}>
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
+        {/* Заголовок */}
+        <div style={{
+          padding: '12px 16px', borderBottom: `1px solid ${secBgColor}`,
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ fontSize: 20 }}>🤖</span>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>AI Talent Hub</span>
+          <span style={{
+            marginLeft: 'auto', fontSize: 12, padding: '2px 8px',
+            borderRadius: 8, background: btnColor + '22', color: btnColor,
+          }}>
+            {user.role === 'employer' ? '🏢 Предприниматель' : '🧠 Специалист'}
+          </span>
+        </div>
+
+        {/* Контент */}
+        <PageComponent />
+
+        {/* Нижняя навигация */}
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          background: bgColor,
+          borderTop: `1px solid ${secBgColor}`,
+          display: 'flex', padding: '8px 0',
+          paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+        }}>
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  flex: 1, background: 'none', border: 'none',
+                  cursor: 'pointer', padding: '6px 0',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  color: isActive ? btnColor : textColor,
+                  opacity: isActive ? 1 : 0.5,
+                }}
+              >
+                <span style={{ fontSize: 22 }}>{tab.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: isActive ? 600 : 400 }}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

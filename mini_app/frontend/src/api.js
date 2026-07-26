@@ -4,24 +4,42 @@
 const API_BASE = '/api';
 
 function getInitData() {
-  return window.Telegram?.WebApp?.initData || '';
+  try {
+    return window.Telegram?.WebApp?.initData || '';
+  } catch (e) {
+    return '';
+  }
 }
 
 async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Telegram-Init-Data': getInitData(),
-      ...options.headers,
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || 'Request failed');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': getInitData(),
+        ...options.headers,
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || 'Request failed');
+    }
+    return res.json();
+  } catch (e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') {
+      throw new Error('Превышено время ожидания');
+    }
+    throw e;
   }
-  return res.json();
 }
 
 export const api = {
@@ -74,19 +92,22 @@ export const api = {
  * Get Telegram user data from initData (parsed by server or from WebApp)
  */
 export function getTelegramUser() {
-  const tg = window.Telegram?.WebApp;
-  if (!tg) return null;
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (!tg) return null;
 
-  // Try initDataUnsafe first (parsed by Telegram)
-  const user = tg.initDataUnsafe?.user;
-  if (user) {
-    return {
-      id: user.id,
-      first_name: user.first_name,
-      last_name: user.last_name || '',
-      username: user.username || '',
-      full_name: [user.first_name, user.last_name].filter(Boolean).join(' '),
-    };
+    const user = tg.initDataUnsafe?.user;
+    if (user) {
+      return {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name || '',
+        username: user.username || '',
+        full_name: [user.first_name, user.last_name].filter(Boolean).join(' '),
+      };
+    }
+  } catch (e) {
+    console.warn('getTelegramUser error:', e);
   }
   return null;
 }
