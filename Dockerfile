@@ -1,24 +1,9 @@
 FROM python:3.12-slim
-
 WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
 COPY . .
-
-# Create data directory
-RUN mkdir -p data
-
-# Expose port
-EXPOSE $PORT
-
-# Start command
-CMD ["bash", "start.sh"]
+WORKDIR /app/mini_app/backend
+RUN mkdir -p /app/data
+EXPOSE 8000
+CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
