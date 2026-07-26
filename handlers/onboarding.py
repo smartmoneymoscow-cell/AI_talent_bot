@@ -81,10 +81,67 @@ async def cmd_start(message: Message, state: FSMContext):
 async def choose_role(callback: CallbackQuery, state: FSMContext):
     role = callback.data.split(":")[1]
     await state.update_data(role=role)
+
+    # Quick register with Telegram name
+    tg_name = callback.from_user.first_name or ""
+    if callback.from_user.last_name:
+        tg_name += " " + callback.from_user.last_name
+    tg_name = tg_name.strip()
+
+    if tg_name and len(tg_name) >= 2:
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text=f"✅ {tg_name}",
+                callback_data="quickreg"),
+             ],
+            [InlineKeyboardButton(
+                text="📝 Ввести имя вручную",
+                callback_data="manualreg"),
+             ],
+        ])
+        await callback.message.edit_text(
+            f"👤 Подтвердите имя или введите своё:",
+            reply_markup=kb,
+        )
+    else:
+        await state.set_state(OnboardingStates.entering_name)
+        await callback.message.edit_text(
+            "👤 Как вас зовут? (ФИО или имя)",
+        )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "quickreg")
+async def quick_register(callback: CallbackQuery, state: FSMContext):
+    """Register instantly with Telegram name."""
+    tg_name = callback.from_user.first_name or ""
+    if callback.from_user.last_name:
+        tg_name += " " + callback.from_user.last_name
+    tg_name = tg_name.strip()
+    if not tg_name or len(tg_name) < 2:
+        await callback.answer("Имя слишком короткое", show_alert=True)
+        return
+    await state.update_data(full_name=tg_name)
+    data = await state.get_data()
+    await callback.answer()
+
+    if data["role"] == "employer":
+        await _finish_employer_cb(callback, state, "")
+    else:
+        await state.set_state(OnboardingStates.entering_skills)
+        await callback.message.edit_text(
+            "🛠 Укажите ваши навыки (через запятую):\n"
+            "Пример: Python, PyTorch, LLM, NLP",
+            reply_markup=_skip_back_kb(),
+        )
+
+
+@router.callback_query(F.data == "manualreg")
+async def manual_register(callback: CallbackQuery, state: FSMContext):
+    """Ask for name manually."""
     await state.set_state(OnboardingStates.entering_name)
-    await callback.message.edit_text(
-        "👤 Как вас зовут? (ФИО или имя)"
-    )
+    await callback.message.edit_text("👤 Как вас зовут? (ФИО или имя)")
     await callback.answer()
 
 
