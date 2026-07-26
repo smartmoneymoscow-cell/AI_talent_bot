@@ -686,7 +686,13 @@ async def get_avatar(tg_id: int):
         return JSONResponse({"url": None})
 
 
-# ── Catch-all: serve React SPA ──────────────────────────────────
+# ── Health / Keep-alive ─────────────────────────────────────────
+@app.get("/health")
+async def health():
+    return {"status": "ok", "bot": "running" if _bot_task and not _bot_task.done() else "stopped"}
+
+
+# ── Catch-all: serve React SPA ─────────────────────────────────-
 FRONTEND_DIR = Path(__file__).resolve().parent / "mini_app" / "frontend" / "dist"
 
 # Mount static assets (JS, CSS, images) BEFORE the catch-all
