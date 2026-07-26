@@ -1,5 +1,5 @@
 #!/bin/bash
-# Render build script - install only pure Python deps
+# Render build script
 set -e
 pip install --no-cache-dir \
     "aiogram>=3.10,<4.0" \

@@ -18,14 +18,14 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 
-import sys
-# Add project root to Python path
-_backend_dir = os.path.dirname(os.path.abspath(__file__))
-_project_root = os.path.join(_backend_dir, "..", "..")
-sys.path.insert(0, os.path.abspath(_project_root))
-
-from ai_talent_bot.database.db import get_db, init_db
-from ai_talent_bot.config import config
+# Local imports (no package dependency)
+try:
+    from db import get_db, init_db
+    from config import config
+except ImportError:
+    # Fallback for when running as part of ai_talent_bot package
+    from ai_talent_bot.database.db import get_db, init_db
+    from ai_talent_bot.config import config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
