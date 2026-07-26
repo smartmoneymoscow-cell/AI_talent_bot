@@ -1,6 +1,6 @@
 """
 Bot + health check for Render free tier.
-Fully self-contained — no package imports.
+Fully self-contained — no package imports needed.
 """
 import asyncio
 import logging
@@ -10,15 +10,18 @@ import sys
 import aiosqlite
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+# Load env from script directory
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_script_dir, ".env"))
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 DB_PATH = os.getenv("DB_PATH", "data/bot.db")
+MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-# ── DB Schema ───────────────────────────────────────────────────
+# ── DB ──────────────────────────────────────────────────────────
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY, telegram_id INTEGER UNIQUE NOT NULL,
@@ -70,6 +73,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 """
 
+
 async def init_db():
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     db = await aiosqlite.connect(DB_PATH)
@@ -98,12 +102,10 @@ async def run_bot():
     from aiogram.enums import ParseMode
     from aiogram.fsm.storage.memory import MemoryStorage
 
-    # Import handlers — they use relative imports within the package
-    # We need to set up the path for them
-    bot_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(bot_dir)
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
+    # Add parent dir to path so handlers can import from ai_talent_bot package
+    parent = os.path.dirname(_script_dir)
+    if parent not in sys.path:
+        sys.path.insert(0, parent)
 
     from ai_talent_bot.handlers import onboarding, profile, orders, applications, search, payments, voice
 
