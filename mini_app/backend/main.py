@@ -19,7 +19,10 @@ from pydantic import BaseModel
 from typing import Optional
 
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+# Add project root to Python path
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+_project_root = os.path.join(_backend_dir, "..", "..")
+sys.path.insert(0, os.path.abspath(_project_root))
 
 from ai_talent_bot.database.db import get_db, init_db
 from ai_talent_bot.config import config
