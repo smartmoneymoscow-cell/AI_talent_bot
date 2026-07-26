@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from '../api';
+import { api, getTelegramUser } from '../api';
 
 export function RegisterPage({ onRegistered }) {
   const [step, setStep] = useState(0);
@@ -10,12 +10,16 @@ export function RegisterPage({ onRegistered }) {
   const [portfolio, setPortfolio] = useState('');
   const [rate, setRate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const tgUser = getTelegramUser();
 
   async function handleSubmit() {
     if (!fullName.trim() || fullName.trim().length < 2) {
-      alert('Введите имя (минимум 2 символа)');
+      setError('Введите имя (минимум 2 символа)');
       return;
     }
+    setError('');
     setSubmitting(true);
     try {
       await api.register({
@@ -28,8 +32,31 @@ export function RegisterPage({ onRegistered }) {
       });
       onRegistered();
     } catch (e) {
-      alert(e.message || 'Ошибка регистрации');
+      setError(e.message || 'Ошибка регистрации');
     } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Quick registration using Telegram data
+  async function quickRegister(selectedRole) {
+    if (!tgUser) return;
+    setRole(selectedRole);
+    setFullName(tgUser.full_name);
+    setError('');
+    setSubmitting(true);
+    try {
+      await api.register({
+        role: selectedRole,
+        full_name: tgUser.full_name,
+        bio: '',
+        skills: '',
+        portfolio_url: '',
+        hourly_rate: 0,
+      });
+      onRegistered();
+    } catch (e) {
+      setError(e.message || 'Ошибка регистрации');
       setSubmitting(false);
     }
   }
@@ -46,11 +73,8 @@ export function RegisterPage({ onRegistered }) {
     color: 'var(--tg-theme-text-color, #000)', fontSize: 15,
     boxSizing: 'border-box',
   };
-  const labelStyle = {
-    display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, marginTop: 16,
-  };
 
-  // Step 0: Role selection
+  // Step 0: Role selection + quick register
   if (step === 0) {
     return (
       <div style={{ padding: 24, textAlign: 'center' }}>
@@ -59,15 +83,88 @@ export function RegisterPage({ onRegistered }) {
         <p style={{ opacity: 0.6, marginBottom: 32 }}>
           Платформа для предпринимателей и специалистов по ИИ
         </p>
-        <p style={{ fontWeight: 600, marginBottom: 16 }}>Выберите роль:</p>
+
+        {error && (
+          <p style={{ color: '#e53935', marginBottom: 16, fontSize: 14 }}>{error}</p>
+        )}
+
+        {tgUser && (
+          <>
+            <p style={{ fontWeight: 600, marginBottom: 8, fontSize: 14, opacity: 0.7 }}>
+              👋 {tgUser.full_name}
+            </p>
+            <p style={{ fontWeight: 600, marginBottom: 16 }}>
+              Быстрая регистрация — выберите роль:
+            </p>
+            <button
+              onClick={() => quickRegister('employer')}
+              disabled={submitting}
+              style={{ ...btnStyle, marginBottom: 12, background: '#4caf50', opacity: submitting ? 0.6 : 1 }}
+            >
+              {submitting ? '⏳...' : '🏢 Я предприниматель'}
+            </button>
+            <button
+              onClick={() => quickRegister('specialist')}
+              disabled={submitting}
+              style={{ ...btnStyle, opacity: submitting ? 0.6 : 1 }}
+            >
+              {submitting ? '⏳...' : '🧠 Я специалист по ИИ'}
+            </button>
+            <div style={{ margin: '24px 0 12px', opacity: 0.4, fontSize: 13 }}>
+              ── или ──
+            </div>
+            <button
+              onClick={() => setStep(1)}
+              style={{ ...btnStyle, background: 'var(--tg-theme-hint-color, #999)44', color: 'var(--tg-theme-text-color, #000)' }}
+            >
+              📝 Заполнить вручную
+            </button>
+          </>
+        )}
+
+        {!tgUser && (
+          <>
+            <p style={{ fontWeight: 600, marginBottom: 16 }}>Выберите роль:</p>
+            <button
+              onClick={() => { setRole('employer'); setStep(2); }}
+              style={{ ...btnStyle, marginBottom: 12, background: '#4caf50' }}
+            >
+              🏢 Я предприниматель
+            </button>
+            <button
+              onClick={() => { setRole('specialist'); setStep(2); }}
+              style={btnStyle}
+            >
+              🧠 Я специалист по ИИ
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Step 1: Role selection (manual flow)
+  if (step === 1) {
+    return (
+      <div style={{ padding: 24, textAlign: 'center' }}>
+        <button onClick={() => setStep(0)} style={backBtn}>← Назад</button>
+        <h2 style={{ margin: '0 0 16px' }}>Выберите роль:</h2>
         <button
-          onClick={() => { setRole('employer'); setStep(1); }}
+          onClick={() => {
+            setRole('employer');
+            if (tgUser) setFullName(tgUser.full_name);
+            setStep(2);
+          }}
           style={{ ...btnStyle, marginBottom: 12, background: '#4caf50' }}
         >
           🏢 Я предприниматель
         </button>
         <button
-          onClick={() => { setRole('specialist'); setStep(1); }}
+          onClick={() => {
+            setRole('specialist');
+            if (tgUser) setFullName(tgUser.full_name);
+            setStep(2);
+          }}
           style={btnStyle}
         >
           🧠 Я специалист по ИИ
@@ -76,19 +173,20 @@ export function RegisterPage({ onRegistered }) {
     );
   }
 
-  // Step 1: Name
-  if (step === 1) {
+  // Step 2: Name
+  if (step === 2) {
     return (
       <div style={{ padding: 24 }}>
-        <button onClick={() => setStep(0)} style={backBtn}>← Назад</button>
+        <button onClick={() => setStep(tgUser ? 0 : 1)} style={backBtn}>← Назад</button>
         <h2 style={{ margin: '0 0 16px' }}>👤 Как вас зовут?</h2>
+        {error && <p style={{ color: '#e53935', marginBottom: 12, fontSize: 14 }}>{error}</p>}
         <input
           value={fullName} onChange={e => setFullName(e.target.value)}
           placeholder="ФИО или имя" style={inputStyle} autoFocus
-          onKeyDown={e => e.key === 'Enter' && fullName.trim().length >= 2 && setStep(2)}
+          onKeyDown={e => e.key === 'Enter' && fullName.trim().length >= 2 && setStep(3)}
         />
         <button
-          onClick={() => setStep(2)}
+          onClick={() => setStep(3)}
           disabled={fullName.trim().length < 2}
           style={{ ...btnStyle, marginTop: 16, opacity: fullName.trim().length < 2 ? 0.5 : 1 }}
         >
@@ -98,11 +196,11 @@ export function RegisterPage({ onRegistered }) {
     );
   }
 
-  // Step 2: Bio
-  if (step === 2) {
+  // Step 3: Bio
+  if (step === 3) {
     return (
       <div style={{ padding: 24 }}>
-        <button onClick={() => setStep(1)} style={backBtn}>← Назад</button>
+        <button onClick={() => setStep(2)} style={backBtn}>← Назад</button>
         <h2 style={{ margin: '0 0 16px' }}>
           {role === 'employer' ? '📝 О себе и бизнесе' : '🧠 О себе'}
         </h2>
@@ -114,10 +212,10 @@ export function RegisterPage({ onRegistered }) {
           style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }}
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button onClick={() => setStep(role === 'specialist' ? 3 : 99)} style={btnStyle}>
+          <button onClick={() => setStep(role === 'specialist' ? 4 : 99)} style={btnStyle}>
             {role === 'specialist' ? 'Далее →' : 'Завершить ✅'}
           </button>
-          <button onClick={() => { setBio(''); setStep(role === 'specialist' ? 3 : 99); }}
+          <button onClick={() => { setBio(''); setStep(role === 'specialist' ? 4 : 99); }}
             style={{ ...btnStyle, background: 'var(--tg-theme-hint-color, #999)33', color: 'var(--tg-theme-text-color, #000)' }}>
             Пропустить
           </button>
@@ -126,42 +224,20 @@ export function RegisterPage({ onRegistered }) {
     );
   }
 
-  // Step 3: Skills (specialist only)
-  if (step === 3) {
-    return (
-      <div style={{ padding: 24 }}>
-        <button onClick={() => setStep(2)} style={backBtn}>← Назад</button>
-        <h2 style={{ margin: '0 0 16px' }}>🛠 Навыки</h2>
-        <input
-          value={skills} onChange={e => setSkills(e.target.value)}
-          placeholder="Python, PyTorch, LLM, NLP" style={inputStyle}
-          onKeyDown={e => e.key === 'Enter' && setStep(4)}
-        />
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button onClick={() => setStep(4)} style={btnStyle}>Далее →</button>
-          <button onClick={() => { setSkills(''); setStep(4); }}
-            style={{ ...btnStyle, background: 'var(--tg-theme-hint-color, #999)33', color: 'var(--tg-theme-text-color, #000)' }}>
-            Пропустить
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Step 4: Portfolio
+  // Step 4: Skills (specialist only)
   if (step === 4) {
     return (
       <div style={{ padding: 24 }}>
         <button onClick={() => setStep(3)} style={backBtn}>← Назад</button>
-        <h2 style={{ margin: '0 0 16px' }}>🔗 Портфолио</h2>
+        <h2 style={{ margin: '0 0 16px' }}>🛠 Навыки</h2>
         <input
-          value={portfolio} onChange={e => setPortfolio(e.target.value)}
-          placeholder="https://github.com/..." style={inputStyle}
+          value={skills} onChange={e => setSkills(e.target.value)}
+          placeholder="Python, PyTorch, LLM, NLP" style={inputStyle}
           onKeyDown={e => e.key === 'Enter' && setStep(5)}
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <button onClick={() => setStep(5)} style={btnStyle}>Далее →</button>
-          <button onClick={() => { setPortfolio(''); setStep(5); }}
+          <button onClick={() => { setSkills(''); setStep(5); }}
             style={{ ...btnStyle, background: 'var(--tg-theme-hint-color, #999)33', color: 'var(--tg-theme-text-color, #000)' }}>
             Пропустить
           </button>
@@ -170,11 +246,33 @@ export function RegisterPage({ onRegistered }) {
     );
   }
 
-  // Step 5: Rate (specialist only)
+  // Step 5: Portfolio
   if (step === 5) {
     return (
       <div style={{ padding: 24 }}>
         <button onClick={() => setStep(4)} style={backBtn}>← Назад</button>
+        <h2 style={{ margin: '0 0 16px' }}>🔗 Портфолио</h2>
+        <input
+          value={portfolio} onChange={e => setPortfolio(e.target.value)}
+          placeholder="https://github.com/..." style={inputStyle}
+          onKeyDown={e => e.key === 'Enter' && setStep(6)}
+        />
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button onClick={() => setStep(6)} style={btnStyle}>Далее →</button>
+          <button onClick={() => { setPortfolio(''); setStep(6); }}
+            style={{ ...btnStyle, background: 'var(--tg-theme-hint-color, #999)33', color: 'var(--tg-theme-text-color, #000)' }}>
+            Пропустить
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 6: Rate (specialist only)
+  if (step === 6) {
+    return (
+      <div style={{ padding: 24 }}>
+        <button onClick={() => setStep(5)} style={backBtn}>← Назад</button>
         <h2 style={{ margin: '0 0 16px' }}>💰 Ставка (₽/час)</h2>
         <input
           type="number" value={rate} onChange={e => setRate(e.target.value)}
@@ -195,8 +293,9 @@ export function RegisterPage({ onRegistered }) {
   // Step 99: Confirm & submit
   return (
     <div style={{ padding: 24 }}>
-      <button onClick={() => setStep(role === 'specialist' ? 5 : 2)} style={backBtn}>← Назад</button>
+      <button onClick={() => setStep(role === 'specialist' ? 6 : 3)} style={backBtn}>← Назад</button>
       <h2 style={{ margin: '0 0 16px' }}>✅ Подтверждение</h2>
+      {error && <p style={{ color: '#e53935', marginBottom: 12, fontSize: 14 }}>{error}</p>}
       <div style={{
         background: 'var(--tg-theme-secondary-bg-color, #f4f4f5)',
         borderRadius: 12, padding: 16, marginBottom: 16,

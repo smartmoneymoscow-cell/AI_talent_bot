@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from './api';
+import { api, getTelegramUser } from './api';
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tgUser, setTgUser] = useState(null);
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -13,6 +14,9 @@ export function AppProvider({ children }) {
       tg.ready();
       tg.expand();
     }
+    // Get Telegram user data for quick registration
+    const tUser = getTelegramUser();
+    setTgUser(tUser);
     loadUser();
   }, []);
 
@@ -48,7 +52,7 @@ export function AppProvider({ children }) {
   }
 
   return (
-    <AppContext.Provider value={{ user, setUser, refreshUser, loadUser }}>
+    <AppContext.Provider value={{ user, setUser, refreshUser, loadUser, tgUser }}>
       {children}
     </AppContext.Provider>
   );

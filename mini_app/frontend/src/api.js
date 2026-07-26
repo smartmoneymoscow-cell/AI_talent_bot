@@ -69,3 +69,24 @@ export const api = {
   // Avatar
   getAvatar: (tgId) => request(`/avatar/${tgId}`),
 };
+
+/**
+ * Get Telegram user data from initData (parsed by server or from WebApp)
+ */
+export function getTelegramUser() {
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return null;
+
+  // Try initDataUnsafe first (parsed by Telegram)
+  const user = tg.initDataUnsafe?.user;
+  if (user) {
+    return {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name || '',
+      username: user.username || '',
+      full_name: [user.first_name, user.last_name].filter(Boolean).join(' '),
+    };
+  }
+  return null;
+}
