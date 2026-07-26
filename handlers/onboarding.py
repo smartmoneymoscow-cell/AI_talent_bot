@@ -67,16 +67,10 @@ async def cmd_start(message: Message, state: FSMContext):
 
     if WELCOME_PHOTO.exists():
         photo = FSInputFile(str(WELCOME_PHOTO))
-        await message.answer_photo(
-            photo=photo,
-            caption=welcome_text,
-            reply_markup=role_choice_kb(),
-        )
+        await message.answer_photo(photo=photo, caption="👋 Добро пожаловать в <b>AI Talent Hub</b>!")
+        await message.answer(welcome_text, reply_markup=role_choice_kb())
     else:
-        await message.answer(
-            welcome_text,
-            reply_markup=role_choice_kb(),
-        )
+        await message.answer(welcome_text, reply_markup=role_choice_kb())
 
 
 @router.callback_query(F.data.startswith("role:"))
