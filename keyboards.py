@@ -9,24 +9,21 @@ from aiogram.types import (
 
 # ── Главное меню ──────────────────────────────────────────────
 def main_menu_kb(role: str, webapp_url: str = "") -> ReplyKeyboardMarkup:
-    webapp_btn = []
-    if webapp_url:
-        webapp_btn = [KeyboardButton(text="📱 Открыть приложение", web_app=WebAppInfo(url=webapp_url))]
-
     if role == "employer":
         buttons = [
-            webapp_btn if webapp_btn else [KeyboardButton(text="📝 Создать заказ"), KeyboardButton(text="📋 Мои заказы")],
+            [KeyboardButton(text="📝 Создать заказ"), KeyboardButton(text="📋 Мои заказы")],
             [KeyboardButton(text="🔍 Найти специалиста"), KeyboardButton(text="👤 Мой профиль")],
             [KeyboardButton(text="⭐ Отзывы"), KeyboardButton(text="📊 Статистика")],
         ]
     else:
         buttons = [
-            webapp_btn if webapp_btn else [KeyboardButton(text="🔎 Лента заказов"), KeyboardButton(text="📋 Мои отклики")],
+            [KeyboardButton(text="🔎 Лента заказов"), KeyboardButton(text="📋 Мои отклики")],
             [KeyboardButton(text="👤 Мой профиль"), KeyboardButton(text="🏆 Мои заказы")],
             [KeyboardButton(text="⭐ Отзывы"), KeyboardButton(text="📊 Статистика")],
         ]
-    # Фильтруем пустые строки
-    buttons = [row for row in buttons if row]
+    # Кнопка Mini App всегда внизу
+    if webapp_url:
+        buttons.append([KeyboardButton(text="📱 Открыть приложение", web_app=WebAppInfo(url=webapp_url))])
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
