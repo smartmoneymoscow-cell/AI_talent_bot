@@ -9,41 +9,28 @@ export function AppProvider({ children }) {
   const [tgUser, setTgUser] = useState(null);
 
   useEffect(() => {
-    // Initialize Telegram WebApp
     try {
       const tg = window.Telegram?.WebApp;
-      if (tg) {
-        tg.ready();
-        tg.expand();
-      }
-    } catch (e) {
-      console.warn('Telegram WebApp init failed:', e);
-    }
+      if (tg) { tg.ready(); tg.expand(); }
+    } catch (e) { console.warn('TG init:', e); }
 
-    // Get Telegram user data for quick registration
-    try {
-      const tUser = getTelegramUser();
-      setTgUser(tUser);
-    } catch (e) {
-      console.warn('getTelegramUser failed:', e);
-    }
+    try { setTgUser(getTelegramUser()); } catch (e) {}
 
-    // Load user from API with timeout
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
-
+    const timeout = setTimeout(() => setLoading(false), 5000);
     loadUser().finally(() => clearTimeout(timeout));
-
     return () => clearTimeout(timeout);
   }, []);
 
   async function loadUser() {
     try {
       const me = await api.getMe();
-      setUser(me);
+      // If user has no role, they need registration
+      if (me && !me.role && me.is_new) {
+        setUser(null); // Show register page
+      } else {
+        setUser(me);
+      }
     } catch (e) {
-      console.error('Failed to load user:', e);
       setUser(null);
     } finally {
       setLoading(false);
@@ -51,7 +38,10 @@ export function AppProvider({ children }) {
   }
 
   function refreshUser() {
-    return api.getMe().then(setUser).catch(() => setUser(null));
+    return api.getMe().then(u => {
+      if (u && !u.role && u.is_new) setUser(null);
+      else setUser(u);
+    }).catch(() => setUser(null));
   }
 
   if (loading) {

@@ -123,7 +123,17 @@ async def get_current_user(x_telegram_init_data: str = Header(alias="X-Telegram-
         cur = await db.execute("SELECT * FROM users WHERE telegram_id = ?", (user_data["id"],))
         row = await cur.fetchone()
         if not row:
-            raise HTTPException(404, "Register in bot first")
+            # Return stub user with telegram data so Mini App can show registration
+            return {
+                "id": None,
+                "telegram_id": user_data["id"],
+                "role": "",
+                "full_name": user_data.get("first_name", "") + " " + user_data.get("last_name", ""),
+                "username": user_data.get("username", ""),
+                "bio": "", "skills": "", "portfolio_url": "",
+                "hourly_rate": 0, "rating": 0, "rating_count": 0,
+                "completed_jobs": 0, "is_active": 1, "is_new": True,
+            }
         return dict(row)
     finally:
         await db.close()

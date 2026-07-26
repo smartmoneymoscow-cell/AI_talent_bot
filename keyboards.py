@@ -28,11 +28,14 @@ def main_menu_kb(role: str, webapp_url: str = "") -> ReplyKeyboardMarkup:
 
 
 # ── Онбординг: выбор роли ─────────────────────────────────────
-def role_choice_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+def role_choice_kb(webapp_url: str = "") -> InlineKeyboardMarkup:
+    rows = [
         [InlineKeyboardButton(text="🏢 Я предприниматель", callback_data="role:employer")],
         [InlineKeyboardButton(text="🧠 Я специалист по ИИ", callback_data="role:specialist")],
-    ])
+    ]
+    if webapp_url:
+        rows.append([InlineKeyboardButton(text="📱 Открыть приложение", web_app=WebAppInfo(url=webapp_url))])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 # ── Категории ─────────────────────────────────────────────────
