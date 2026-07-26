@@ -12,9 +12,10 @@ pip install --no-cache-dir \
     "fastapi>=0.110.0" \
     "uvicorn>=0.27.0"
 
-# Ensure ai_talent_bot package is importable (repo is AI_talent_bot)
-if [ ! -d "ai_talent_bot" ] && [ -d "AI_talent_bot" ]; then
-    ln -sf AI_talent_bot ai_talent_bot
+# The repo root IS the ai_talent_bot package (__init__.py, config.py, handlers/ etc)
+# On Render it's cloned to /opt/render/project/src/ — create symlink so imports work
+if [ ! -e "ai_talent_bot" ]; then
+    ln -sf . ai_talent_bot
 fi
 
 echo "=== Build complete ==="
