@@ -3,6 +3,7 @@ Standalone server for Render deployment.
 Serves FastAPI API + React Mini App static files.
 No package imports — everything self-contained.
 """
+import asyncio
 import hashlib
 import hmac
 import json
@@ -166,16 +167,89 @@ class RegisterUser(BaseModel):
     hourly_rate: Optional[int] = 0
 
 
+# ── Bot background task ─────────────────────────────────────────
+_bot_task = None
+
+
+async def _run_bot():
+    """Start Telegram bot polling in background."""
+    import sys as _sys
+    _project_root = str(Path(__file__).resolve().parent)
+    if _project_root not in _sys.path:
+        _sys.path.insert(0, _project_root)
+
+    try:
+        from aiogram import Bot, Dispatcher
+        from aiogram.client.default import DefaultBotProperties
+        from aiogram.enums import ParseMode
+        from aiogram.fsm.storage.memory import MemoryStorage
+        from ai_talent_bot.config import config as bot_config
+        from ai_talent_bot.database.db import init_db
+        from ai_talent_bot.handlers import (
+            onboarding, profile, orders, applications, search, payments, voice
+        )
+    except Exception as e:
+        logger.error(f"Bot imports failed: {e}. Bot will NOT start.")
+        return
+
+    await init_db()
+    logger.info("Bot DB initialized")
+
+    try:
+        from ai_talent_bot.utils.payments import init_yookassa
+        init_yookassa()
+    except Exception:
+        pass
+
+    bot = Bot(
+        token=bot_config.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    dp = Dispatcher(storage=MemoryStorage())
+
+    dp.include_router(voice.router)
+    dp.include_router(onboarding.router)
+    dp.include_router(profile.router)
+    dp.include_router(orders.router)
+    dp.include_router(applications.router)
+    dp.include_router(search.router)
+    dp.include_router(payments.router)
+
+    logger.info("Telegram bot polling started!")
+    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+
+
 # ── App ─────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app):
+    global _bot_task
+
+    # Init Mini App DB
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     db = await get_db()
     await db.executescript(SCHEMA)
     await db.commit()
     await db.close()
     logger.info("Mini App backend started")
+
+    # Start Telegram bot in background
+    if BOT_TOKEN:
+        _bot_task = asyncio.create_task(_run_bot())
+        _bot_task.add_done_callback(
+            lambda t: logger.error(f"Bot task exited: {t.exception()}") if t.exception() else None
+        )
+    else:
+        logger.warning("BOT_TOKEN not set — bot will NOT start")
+
     yield
+
+    # Shutdown
+    if _bot_task and not _bot_task.done():
+        _bot_task.cancel()
+        try:
+            await _bot_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="AI Talent Hub", lifespan=lifespan)
