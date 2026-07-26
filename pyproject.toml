@@ -1,0 +1,18 @@
+[project]
+name = "ai-talent-bot"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.10,<4.0",
+    "aiosqlite>=0.20.0",
+    "python-dotenv>=1.0.0",
+    "yookassa>=3.3.0",
+    "vosk>=0.3.45",
+    "aiohttp>=3.9.0",
+]
+
+[project.scripts]
+ai-talent-bot = "ai_talent_bot.main:main"
+
+[tool.setuptools.packages.find]
+include = ["ai_talent_bot*"]
