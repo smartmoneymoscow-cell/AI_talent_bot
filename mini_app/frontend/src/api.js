@@ -27,6 +27,8 @@ async function request(path, options = {}) {
 export const api = {
   // Auth
   getMe: () => request('/me'),
+  register: (data) => request('/register', { method: 'POST', body: data }),
+  switchRole: () => request('/switch-role', { method: 'POST' }),
   updateMe: (data) => request('/me', { method: 'PATCH', body: data }),
   getMyStats: () => request('/me/stats'),
 
@@ -42,6 +44,10 @@ export const api = {
 
   // Applications
   getApplications: (orderId) => request(`/orders/${orderId}/applications`),
+  getMyApplications: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/my-applications?${qs}`);
+  },
   createApplication: (data) => request('/applications', { method: 'POST', body: data }),
   acceptApplication: (id) => request(`/applications/${id}/accept`, { method: 'PATCH' }),
   rejectApplication: (id) => request(`/applications/${id}/reject`, { method: 'PATCH' }),
@@ -54,6 +60,10 @@ export const api = {
   getSpecialist: (id) => request(`/specialists/${id}`),
 
   // Reviews
+  getReviews: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/reviews?${qs}`);
+  },
   createReview: (data) => request('/reviews', { method: 'POST', body: data }),
 
   // Avatar

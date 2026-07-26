@@ -8,6 +8,7 @@ export function EmployerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [bio, setBio] = useState(user?.bio || '');
   const [saving, setSaving] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -22,6 +23,16 @@ export function EmployerProfilePage() {
       setEditing(false);
     } catch (e) { alert(e.message); }
     finally { setSaving(false); }
+  }
+
+  async function handleSwitchRole() {
+    if (!confirm('Сменить роль на «Специалист»?')) return;
+    setSwitching(true);
+    try {
+      await api.switchRole();
+      await refreshUser();
+    } catch (e) { alert(e.message); }
+    finally { setSwitching(false); }
   }
 
   if (!user) return <Loader />;
@@ -97,8 +108,23 @@ export function EmployerProfilePage() {
             </p>
           </div>
           <button onClick={() => { setBio(user.bio || ''); setEditing(true); }}
-            style={{ ...primaryBtn, width: '100%' }}>
+            style={{ ...primaryBtn, width: '100%', marginBottom: 12 }}>
             ✏️ Редактировать
+          </button>
+
+          <button
+            onClick={handleSwitchRole}
+            disabled={switching}
+            style={{
+              width: '100%', padding: '12px 0', borderRadius: 10,
+              border: '1px solid var(--tg-theme-hint-color, #999)44',
+              background: 'transparent',
+              color: 'var(--tg-theme-hint-color, #999)',
+              cursor: 'pointer', fontSize: 14,
+              opacity: switching ? 0.5 : 1,
+            }}
+          >
+            {switching ? '⏳...' : '🔄 Сменить роль на специалиста'}
           </button>
         </div>
       )}

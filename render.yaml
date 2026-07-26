@@ -3,12 +3,14 @@ services:
     name: ai-talent-bot
     runtime: python
     plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "cd mini_app/backend && python3 -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "bash render_build.sh"
+    startCommand: "bash render_start.sh"
     envVars:
       - key: BOT_TOKEN
+        sync: false
+      - key: MINI_APP_URL
         sync: false
       - key: PLATFORM_FEE_PERCENT
         value: "5"
       - key: DB_PATH
-        value: data/bot.db
+        value: /opt/render/project/src/data/bot.db

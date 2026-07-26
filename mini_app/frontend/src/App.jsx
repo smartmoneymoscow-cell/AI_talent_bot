@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from './context';
+import { RegisterPage } from './pages/Register';
 
 // Specialist pages
 import { AllOrdersPage } from './pages/SpecialistOrders';
@@ -11,21 +12,31 @@ import { EmployerOrdersPage } from './pages/EmployerOrders';
 import { SpecialistsPage } from './pages/EmployerSpecialists';
 import { EmployerProfilePage } from './pages/EmployerProfile';
 
+// Shared pages
+import { ReviewsPage } from './pages/Reviews';
+
 const specialistTabs = [
-  { key: 'orders', label: 'Все заказы', icon: '📋', page: AllOrdersPage },
-  { key: 'my', label: 'Мои заказы', icon: '🏆', page: MyOrdersSpecialistPage },
+  { key: 'orders', label: 'Заказы', icon: '📋', page: AllOrdersPage },
+  { key: 'my', label: 'Мои', icon: '🏆', page: MyOrdersSpecialistPage },
+  { key: 'reviews', label: 'Отзывы', icon: '⭐', page: ReviewsPage },
   { key: 'profile', label: 'Профиль', icon: '👤', page: SpecialistProfilePage },
 ];
 
 const employerTabs = [
-  { key: 'orders', label: 'Мои заказы', icon: '📋', page: EmployerOrdersPage },
+  { key: 'orders', label: 'Заказы', icon: '📋', page: EmployerOrdersPage },
   { key: 'specs', label: 'Исполнители', icon: '🧠', page: SpecialistsPage },
+  { key: 'reviews', label: 'Отзывы', icon: '⭐', page: ReviewsPage },
   { key: 'profile', label: 'Профиль', icon: '👤', page: EmployerProfilePage },
 ];
 
 export default function App() {
-  const { user } = useApp();
+  const { user, loading, loadUser } = useApp();
   const [activeTab, setActiveTab] = React.useState('orders');
+
+  // Show registration if not logged in
+  if (!loading && !user) {
+    return <RegisterPage onRegistered={loadUser} />;
+  }
 
   if (!user) {
     return (
@@ -37,9 +48,7 @@ export default function App() {
         <div>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🤖</div>
           <h2 style={{ margin: '0 0 8px' }}>AI Talent Hub</h2>
-          <p style={{ opacity: 0.6, fontSize: 14 }}>
-            Зарегистрируйтесь в боте, чтобы использовать Mini App
-          </p>
+          <p style={{ opacity: 0.6, fontSize: 14 }}>Загрузка...</p>
         </div>
       </div>
     );
