@@ -225,6 +225,19 @@ async def _run_bot():
     dp.include_router(search.router)
     dp.include_router(payments.router)
 
+    # Set Mini App menu button in bottom-left of input
+    try:
+        from aiogram.types import MenuButtonWebApp, BotCommand
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="📱 AI Hub",
+                web_app={"url": bot_config.MINI_APP_URL},
+            )
+        )
+        logger.info("Menu button set")
+    except Exception as e:
+        logger.warning(f"Menu button failed: {e}")
+
     logger.info("Telegram bot polling started!")
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 

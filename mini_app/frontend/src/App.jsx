@@ -116,7 +116,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div style={{
+      <div data-app style={{
         minHeight: '100vh',
         background: bgColor,
         color: textColor,
