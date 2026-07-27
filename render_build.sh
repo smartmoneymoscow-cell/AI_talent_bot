@@ -17,38 +17,27 @@ if [ ! -e "ai_talent_bot" ]; then
     ln -sf . ai_talent_bot
 fi
 
-# Build React Mini App frontend
+# Build React Mini App frontend (if npm is available)
 echo "=== Building Mini App frontend ==="
-PROJECT_ROOT=$(pwd)
 if [ -d "mini_app/frontend" ]; then
     cd mini_app/frontend
 
-    # Install Node.js if not present (Render Python env may not have it)
-    if ! command -v node &> /dev/null; then
-        echo "Node.js not found — installing..."
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>/dev/null || true
-        apt-get install -y nodejs 2>/dev/null || {
-            echo "Trying nvm approach..."
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            nvm install 20 2>/dev/null || true
-        }
-    fi
-
     if command -v npm &> /dev/null; then
         echo "npm found: $(npm --version)"
-        npm install --legacy-peer-deps
-        npm run build
+        npm install --legacy-peer-deps 2>&1 | tail -3
+        npm run build 2>&1 | tail -5
         echo "Frontend built successfully!"
-        ls -la dist/ 2>/dev/null || echo "WARNING: dist/ not created"
     else
-        echo "WARNING: npm not available. Using pre-built dist/ from repo."
-        if [ ! -d "dist" ]; then
-            echo "ERROR: No dist/ directory and can't build frontend!"
-        fi
+        echo "npm not available — using pre-built dist/ from repo"
     fi
 
-    cd "$PROJECT_ROOT"
+    if [ ! -d "dist" ]; then
+        echo "ERROR: No dist/ directory! Frontend will not work."
+    else
+        echo "dist/ exists: $(ls dist/ 2>/dev/null | wc -l) files"
+    fi
+
+    cd /opt/render/project/src 2>/dev/null || cd ../..
 else
     echo "WARNING: mini_app/frontend directory not found"
 fi
