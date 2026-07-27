@@ -17,6 +17,13 @@ export function SpecialistProfilePage() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
 
+  const voiceBtnStyle = {
+    position: 'absolute', right: 8, bottom: 8,
+    width: 36, height: 36, borderRadius: '50%', border: 'none',
+    background: recording ? '#f44336' : 'var(--tg-theme-button-color, #3390ec)',
+    color: '#fff', cursor: 'pointer', fontSize: 16,
+  };
+
   useEffect(() => {
     api.getMyStats().then(setStats).catch(() => {});
   }, []);
@@ -263,10 +270,4 @@ const primaryBtn = {
 const secondaryBtn = {
   ...primaryBtn, background: 'var(--tg-theme-hint-color, #999)33',
   color: 'var(--tg-theme-text-color, #000)',
-};
-const voiceBtnStyle = {
-  position: 'absolute', right: 8, bottom: 8,
-  width: 36, height: 36, borderRadius: '50%', border: 'none',
-  background: recording ? '#f44336' : 'var(--tg-theme-button-color, #3390ec)',
-  color: '#fff', cursor: 'pointer', fontSize: 16,
 };
