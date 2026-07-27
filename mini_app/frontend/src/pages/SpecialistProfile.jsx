@@ -46,9 +46,10 @@ export function SpecialistProfilePage() {
   }
 
   async function startVoiceInput(field) {
+    let recorder = null;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -56,7 +57,6 @@ export function SpecialistProfilePage() {
       recorder.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        // Отправляем в бот для распознавания — через Telegram WebApp
         const tg = window.Telegram?.WebApp;
         if (tg) {
           tg.showAlert('🎤 Голосовое записано! Отправьте его боту для распознавания.');
@@ -68,11 +68,14 @@ export function SpecialistProfilePage() {
 
       // Автостоп через 30 сек
       setTimeout(() => {
-        if (recorder.state === 'recording') recorder.stop();
+        if (recorder && recorder.state === 'recording') {
+          recorder.stop();
+        }
         setRecording(false);
       }, 30000);
     } catch (e) {
       alert('Микрофон не доступен');
+      setRecording(false);
     }
   }
 
