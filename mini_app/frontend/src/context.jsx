@@ -9,12 +9,28 @@ export function AppProvider({ children }) {
   const [tgUser, setTgUser] = useState(null);
 
   useEffect(() => {
-    try {
-      const tg = window.Telegram?.WebApp;
-      if (tg) { tg.ready(); tg.expand(); }
-    } catch (e) { console.warn('TG init:', e); }
+    function initTG() {
+      try {
+        const tg = window.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+      } catch (e) { console.warn('TG init:', e); }
+      try { setTgUser(getTelegramUser()); } catch (e) {}
+    }
 
-    try { setTgUser(getTelegramUser()); } catch (e) {}
+    // SDK may load async — wait for it
+    if (window.Telegram?.WebApp) {
+      initTG();
+    } else {
+      window.addEventListener('telegram-web-app-ready', initTG);
+      // Fallback: try again after SDK script loads
+      const checkInterval = setInterval(() => {
+        if (window.Telegram?.WebApp) {
+          clearInterval(checkInterval);
+          initTG();
+        }
+      }, 100);
+      setTimeout(() => clearInterval(checkInterval), 5000);
+    }
 
     const timeout = setTimeout(() => setLoading(false), 5000);
     loadUser().finally(() => clearTimeout(timeout));

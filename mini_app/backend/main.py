@@ -128,6 +128,14 @@ class UserUpdate(BaseModel):
     portfolio_url: Optional[str] = None
     hourly_rate: Optional[int] = None
 
+class UserRegister(BaseModel):
+    role: str
+    full_name: str
+    bio: Optional[str] = ""
+    skills: Optional[str] = ""
+    portfolio_url: Optional[str] = ""
+    hourly_rate: Optional[int] = 0
+
 class OrderCreate(BaseModel):
     title: str
     description: str
@@ -149,6 +157,51 @@ class ReviewCreate(BaseModel):
 @app.get("/api/me")
 async def get_me(user=Depends(get_current_user)):
     return user
+
+
+@app.post("/api/register")
+async def register(data: UserRegister, x_telegram_init_data: str = Header(alias="X-Telegram-Init-Data")):
+    """Регистрация нового пользователя."""
+    user_data = validate_init_data(x_telegram_init_data, config.BOT_TOKEN)
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Invalid Telegram initData")
+
+    if data.role not in ("employer", "specialist"):
+        raise HTTPException(status_code=400, detail="Role must be 'employer' or 'specialist'")
+
+    if not data.full_name or len(data.full_name.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Name is too short")
+
+    db = await get_db()
+    try:
+        # Check if user already exists
+        cursor = await db.execute(
+            "SELECT * FROM users WHERE telegram_id = ?",
+            (user_data["id"],),
+        )
+        existing = await cursor.fetchone()
+        if existing:
+            # Already registered — return existing user
+            return dict(existing)
+
+        # Create new user
+        username = user_data.get("username", "")
+        await db.execute(
+            """INSERT INTO users (telegram_id, username, full_name, role, bio, skills, portfolio_url, hourly_rate, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
+            (user_data["id"], username, data.full_name.strip(), data.role,
+             data.bio or "", data.skills or "", data.portfolio_url or "", data.hourly_rate or 0),
+        )
+        await db.commit()
+
+        # Return the created user
+        cursor = await db.execute(
+            "SELECT * FROM users WHERE telegram_id = ?",
+            (user_data["id"],),
+        )
+        return dict(await cursor.fetchone())
+    finally:
+        await db.close()
 
 
 @app.patch("/api/me")
