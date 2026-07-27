@@ -735,17 +735,12 @@ async def get_avatar(tg_id: int):
 # ── Health / Keep-alive ─────────────────────────────────────────
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
-    assets_dir = FRONTEND_DIR / "assets"
-    assets_files = [f.name for f in assets_dir.iterdir()] if assets_dir.exists() else []
     return {
         "status": "ok",
         "bot": "running" if _bot_task and not _bot_task.done() else "stopped",
         "bot_token_set": bool(BOT_TOKEN),
         "mini_app_url_set": bool(MINI_APP_URL),
         "frontend_exists": FRONTEND_DIR.exists(),
-        "frontend_dir": str(FRONTEND_DIR),
-        "assets_dir_exists": assets_dir.exists(),
-        "assets_files": assets_files,
     }
 
 
