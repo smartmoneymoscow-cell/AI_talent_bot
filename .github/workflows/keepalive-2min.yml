@@ -1,0 +1,13 @@
+# Layer 4 of 4: 2-minute keep-alive (UptimeRobot equivalent)
+name: Keep-Alive-2min
+on:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Ping Render
+        run: curl -s --max-time 30 "https://ai-talent-hub.onrender.com/health" || echo "cold start"
