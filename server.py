@@ -750,12 +750,10 @@ FRONTEND_DIR = Path(__file__).resolve().parent / "mini_app" / "frontend" / "dist
 logger.info(f"Frontend dir: {FRONTEND_DIR}")
 logger.info(f"Frontend exists: {FRONTEND_DIR.exists()}")
 
-# Mount static assets (JS, CSS, images) BEFORE the catch-all
 if FRONTEND_DIR.exists():
     assets_dir = FRONTEND_DIR / "assets"
     if assets_dir.exists():
-        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="static-assets")
-        logger.info(f"Static assets mounted from {assets_dir}")
+        logger.info(f"Assets dir: {assets_dir} ({len(list(assets_dir.iterdir()))} files)")
     else:
         logger.error(f"Assets directory NOT FOUND: {assets_dir}")
 else:
@@ -766,22 +764,48 @@ else:
 @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
 async def serve_spa(full_path: str, request: Request):
     """Serve React SPA for all non-API routes."""
-    # Skip API routes (shouldn't reach here, but safety check)
+    # Skip API routes
     if full_path.startswith("api/"):
         raise HTTPException(404, "API route not found")
 
     if not FRONTEND_DIR.exists():
-        # Return a helpful HTML page instead of JSON
-        return FileResponse(
-            str(Path(__file__).resolve().parent / "mini_app" / "frontend" / "index.html")
-        ) if (Path(__file__).resolve().parent / "mini_app" / "frontend" / "index.html").exists() else JSONResponse(
+        # Serve source index.html as fallback
+        src_index = Path(__file__).resolve().parent / "mini_app" / "frontend" / "index.html"
+        if src_index.exists():
+            return FileResponse(str(src_index))
+        return JSONResponse(
             {"error": "Frontend not built. Run: cd mini_app/frontend && npm install && npm run build"},
             status_code=503,
         )
+
+    # Serve static assets (JS, CSS, images) directly
+    if full_path.startswith("assets/"):
+        asset_file = FRONTEND_DIR / full_path
+        if asset_file.exists() and asset_file.is_file():
+            # Determine content type
+            suffix = asset_file.suffix.lower()
+            media_types = {
+                ".js": "application/javascript",
+                ".css": "text/css",
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".gif": "image/gif",
+                ".svg": "image/svg+xml",
+                ".ico": "image/x-icon",
+                ".woff": "font/woff",
+                ".woff2": "font/woff2",
+                ".ttf": "font/ttf",
+            }
+            media_type = media_types.get(suffix, "application/octet-stream")
+            return FileResponse(str(asset_file), media_type=media_type)
+        raise HTTPException(404, "Asset not found")
+
     # Try to serve exact file first (favicon, manifest, etc.)
     file_path = FRONTEND_DIR / full_path
     if full_path and file_path.exists() and file_path.is_file():
         return FileResponse(str(file_path))
+
     # Serve index.html for SPA routing
     index = FRONTEND_DIR / "index.html"
     if index.exists():
