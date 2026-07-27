@@ -263,23 +263,23 @@ async def _run_bot():
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 
-# ── Keep-alive (prevent Render free tier sleep) ─────────────────
+# ── Keep-alive (4-layer anti-sleep system) ───────────────────────
 async def _keep_alive():
-    """Ping own /health every 10 minutes to prevent Render from sleeping."""
+    """Ping own /health every 30 seconds to prevent Render from sleeping.
+    Layer 1 of 4: Self-ping from within the process."""
     import aiohttp
-    await asyncio.sleep(30)  # Wait for server to start
+    await asyncio.sleep(10)  # Wait for server to start
     port = os.environ.get('PORT', '8000')
+    url = f"http://localhost:{port}/health"
+    logger.info(f"Keep-alive self-ping → {url} every 30s")
     while True:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"http://localhost:{port}/health",
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    logger.debug(f"Keep-alive: {resp.status}")
-        except Exception:
-            pass
-        await asyncio.sleep(600)  # Every 10 minutes
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    logger.debug(f"Self-ping: {resp.status}")
+        except Exception as e:
+            logger.debug(f"Self-ping failed: {e}")
+        await asyncio.sleep(30)
 
 
 # ── App ─────────────────────────────────────────────────────────
