@@ -6,9 +6,34 @@
     <title>AI Talent Hub</title>
     <link rel="preload" href="https://telegram.org/js/telegram-web-app.js" as="script" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script type="module" crossorigin src="/assets/index-DVyqimqd.js"></script>
+    <script>
+      // Debug: show what's loaded
+      window.__DEBUG = [];
+      function dbg(msg) { window.__DEBUG.push('[' + new Date().toISOString().slice(11,23) + '] ' + msg); }
+      dbg('HTML loaded');
+      dbg('TG SDK: ' + (window.Telegram ? 'YES' : 'NO'));
+      dbg('TG.WebApp: ' + (window.Telegram?.WebApp ? 'YES' : 'NO'));
+      dbg('initData len: ' + (window.Telegram?.WebApp?.initData?.length || 0));
+      window.onerror = function(msg, src, line, col, err) {
+        dbg('ERROR: ' + msg + ' at ' + src + ':' + line);
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        dbg('REJECTION: ' + (e.reason?.message || e.reason));
+      });
+    </script>
+    <script type="module" crossorigin src="/assets/index-Dsn87ov-.js"></script>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // After 3 seconds, if root is still empty, show debug info
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && root.children.length === 0 && window.__DEBUG) {
+          root.innerHTML = '<div style="padding:20px;font-family:monospace;font-size:12px;background:#fff;color:#000;white-space:pre-wrap;">' +
+            '<b>DEBUG INFO:</b>\n' + window.__DEBUG.join('\n') + '</div>';
+        }
+      }, 3000);
+    </script>
   </body>
 </html>

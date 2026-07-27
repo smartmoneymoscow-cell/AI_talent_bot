@@ -13,10 +13,15 @@ function getInitData() {
 
 async function request(path, options = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const fetchTimeout = setTimeout(() => controller.abort(), 8000);
+
+  // Promise.race fallback for environments where AbortController doesn't work
+  const raceTimeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Превышено время ожидания')), 10000)
+  );
 
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const fetchPromise = fetch(`${API_BASE}${path}`, {
       ...options,
       signal: controller.signal,
       headers: {
@@ -26,7 +31,9 @@ async function request(path, options = {}) {
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
-    clearTimeout(timeout);
+
+    const res = await Promise.race([fetchPromise, raceTimeout]);
+    clearTimeout(fetchTimeout);
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -34,7 +41,7 @@ async function request(path, options = {}) {
     }
     return res.json();
   } catch (e) {
-    clearTimeout(timeout);
+    clearTimeout(fetchTimeout);
     if (e.name === 'AbortError') {
       throw new Error('Превышено время ожидания');
     }
