@@ -263,6 +263,25 @@ async def _run_bot():
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 
+# ── Keep-alive (prevent Render free tier sleep) ─────────────────
+async def _keep_alive():
+    """Ping own /health every 10 minutes to prevent Render from sleeping."""
+    import aiohttp
+    await asyncio.sleep(30)  # Wait for server to start
+    port = os.environ.get('PORT', '8000')
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"http://localhost:{port}/health",
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    logger.debug(f"Keep-alive: {resp.status}")
+        except Exception:
+            pass
+        await asyncio.sleep(600)  # Every 10 minutes
+
+
 # ── App ─────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app):
@@ -285,9 +304,14 @@ async def lifespan(app):
     else:
         logger.warning("BOT_TOKEN not set — bot will NOT start")
 
+    # Start keep-alive pinger
+    keepalive_task = asyncio.create_task(_keep_alive())
+    logger.info("Keep-alive started (ping every 10 min)")
+
     yield
 
     # Shutdown
+    keepalive_task.cancel()
     if _bot_task and not _bot_task.done():
         _bot_task.cancel()
         try:
