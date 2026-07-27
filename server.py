@@ -712,7 +712,7 @@ async def get_avatar(tg_id: int):
 
 
 # ── Health / Keep-alive ─────────────────────────────────────────
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok", "bot": "running" if _bot_task and not _bot_task.done() else "stopped"}
 
@@ -736,7 +736,7 @@ else:
     logger.error("Run: cd mini_app/frontend && npm install && npm run build")
 
 
-@app.get("/{full_path:path}")
+@app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
 async def serve_spa(full_path: str):
     """Serve React SPA for all non-API routes."""
     if not FRONTEND_DIR.exists():
