@@ -15,20 +15,26 @@ async function request(path, options = {}) {
   const controller = new AbortController();
   const fetchTimeout = setTimeout(() => controller.abort(), 8000);
 
-  // Promise.race fallback for environments where AbortController doesn't work
   const raceTimeout = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('Превышено время ожидания')), 10000)
   );
 
+  const initData = getInitData();
+
   try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+    // Only send initData header if we have it
+    if (initData) {
+      headers['X-Telegram-Init-Data'] = initData;
+    }
+
     const fetchPromise = fetch(`${API_BASE}${path}`, {
       ...options,
       signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Telegram-Init-Data': getInitData(),
-        ...options.headers,
-      },
+      headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
 
@@ -37,7 +43,7 @@ async function request(path, options = {}) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || 'Request failed');
+      throw new Error(err.detail || `Request failed (${res.status})`);
     }
     return res.json();
   } catch (e) {

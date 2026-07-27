@@ -5,6 +5,7 @@ services:
     plan: free
     buildCommand: "bash render_build.sh"
     startCommand: "bash render_start.sh"
+    healthCheckPath: /health
     envVars:
       - key: BOT_TOKEN
         sync: false

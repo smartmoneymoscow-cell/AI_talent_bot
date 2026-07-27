@@ -28,9 +28,16 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 DB_PATH = os.getenv("DB_PATH", str(Path(__file__).resolve().parent / "data" / "bot.db"))
 PLATFORM_FEE = float(os.getenv("PLATFORM_FEE_PERCENT", "5"))
+MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+# ── Startup env validation ─────────────────────────────────────
+logger.info(f"BOT_TOKEN: {'set (' + str(len(BOT_TOKEN)) + ' chars)' if BOT_TOKEN else '⚠️ NOT SET'}")
+logger.info(f"MINI_APP_URL: {MINI_APP_URL or '⚠️ NOT SET'}")
+logger.info(f"DB_PATH: {DB_PATH}")
+logger.info(f"PLATFORM_FEE: {PLATFORM_FEE}%")
 
 # ── DB ──────────────────────────────────────────────────────────
 SCHEMA = """
@@ -95,6 +102,11 @@ async def get_db():
 
 # ── Telegram validation ─────────────────────────────────────────
 def validate_init_data(init_data: str) -> dict | None:
+    if not BOT_TOKEN:
+        logger.error("Cannot validate initData: BOT_TOKEN is empty")
+        return None
+    if not init_data or not init_data.strip():
+        return None
     try:
         parsed = parse_qs(init_data)
         if "hash" not in parsed:
@@ -105,19 +117,24 @@ def validate_init_data(init_data: str) -> dict | None:
         secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
         computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
         if computed != hash_from_tg:
+            logger.warning("initData hash mismatch")
             return None
         auth_date = int(parsed.get("auth_date", ["0"])[0])
         if time.time() - auth_date > 86400:
+            logger.warning("initData expired")
             return None
         return json.loads(parsed.get("user", ["{}"])[0])
-    except Exception:
+    except Exception as e:
+        logger.error(f"validate_init_data error: {e}")
         return None
 
 
-async def get_current_user(x_telegram_init_data: str = Header(alias="X-Telegram-Init-Data")):
+async def get_current_user(x_telegram_init_data: str = Header(alias="X-Telegram-Init-Data", default="")):
+    if not x_telegram_init_data or not x_telegram_init_data.strip():
+        raise HTTPException(401, "Откройте приложение через кнопку в боте")
     user_data = validate_init_data(x_telegram_init_data)
     if not user_data:
-        raise HTTPException(401, "Invalid initData")
+        raise HTTPException(401, "Данные Telegram невалидны. Откройте приложение через бота заново.")
     db = await get_db()
     try:
         cur = await db.execute("SELECT * FROM users WHERE telegram_id = ?", (user_data["id"],))
@@ -226,17 +243,21 @@ async def _run_bot():
     dp.include_router(payments.router)
 
     # Set Mini App menu button in bottom-left of input
-    try:
-        from aiogram.types import MenuButtonWebApp, BotCommand
-        await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(
-                text="📱 AI Hub",
-                web_app={"url": bot_config.MINI_APP_URL},
+    mini_app_url = MINI_APP_URL or getattr(bot_config, 'MINI_APP_URL', '')
+    if mini_app_url:
+        try:
+            from aiogram.types import MenuButtonWebApp, BotCommand
+            await bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(
+                    text="📱 AI Hub",
+                    web_app={"url": mini_app_url},
+                )
             )
-        )
-        logger.info("Menu button set")
-    except Exception as e:
-        logger.warning(f"Menu button failed: {e}")
+            logger.info(f"Menu button set → {mini_app_url}")
+        except Exception as e:
+            logger.warning(f"Menu button failed: {e}")
+    else:
+        logger.warning("MINI_APP_URL not set — menu button skipped. Set it in Render Environment Variables!")
 
     logger.info("Telegram bot polling started!")
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
@@ -714,7 +735,13 @@ async def get_avatar(tg_id: int):
 # ── Health / Keep-alive ─────────────────────────────────────────
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
-    return {"status": "ok", "bot": "running" if _bot_task and not _bot_task.done() else "stopped"}
+    return {
+        "status": "ok",
+        "bot": "running" if _bot_task and not _bot_task.done() else "stopped",
+        "bot_token_set": bool(BOT_TOKEN),
+        "mini_app_url_set": bool(MINI_APP_URL),
+        "frontend_exists": FRONTEND_DIR.exists(),
+    }
 
 
 # ── Catch-all: serve React SPA ─────────────────────────────────-
@@ -737,10 +764,17 @@ else:
 
 
 @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
-async def serve_spa(full_path: str):
+async def serve_spa(full_path: str, request: Request):
     """Serve React SPA for all non-API routes."""
+    # Skip API routes (shouldn't reach here, but safety check)
+    if full_path.startswith("api/"):
+        raise HTTPException(404, "API route not found")
+
     if not FRONTEND_DIR.exists():
-        return JSONResponse(
+        # Return a helpful HTML page instead of JSON
+        return FileResponse(
+            str(Path(__file__).resolve().parent / "mini_app" / "frontend" / "index.html")
+        ) if (Path(__file__).resolve().parent / "mini_app" / "frontend" / "index.html").exists() else JSONResponse(
             {"error": "Frontend not built. Run: cd mini_app/frontend && npm install && npm run build"},
             status_code=503,
         )

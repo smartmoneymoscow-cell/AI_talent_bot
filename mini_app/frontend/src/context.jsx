@@ -41,6 +41,16 @@ export function AppProvider({ children }) {
     // Hard timeout: after 4 seconds, ALWAYS stop loading
     const hardTimeout = setTimeout(finish, 4000);
 
+    // Check if we have initData — if not, skip API call entirely
+    const hasInitData = !!(window.Telegram?.WebApp?.initData);
+    if (!hasInitData) {
+      console.warn('No Telegram initData — showing registration page');
+      setUser(null);
+      clearTimeout(hardTimeout);
+      finish();
+      return () => { mounted.current = false; clearTimeout(hardTimeout); };
+    }
+
     api.getMe()
       .then(me => {
         if (!mounted.current) return;
@@ -52,6 +62,7 @@ export function AppProvider({ children }) {
       })
       .catch(e => {
         console.warn('getMe error:', e);
+        // On 401 or network error — show registration, not blank screen
         if (mounted.current) setUser(null);
       })
       .finally(() => {
