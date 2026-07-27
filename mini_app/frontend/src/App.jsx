@@ -101,18 +101,11 @@ export default function App() {
   const PageComponent = activeTabData.page;
 
   const tg = window.Telegram?.WebApp;
-  const bgColor = tg?.themeParams?.bg_color
-    ? `#${tg.themeParams.bg_color.toString(16).padStart(6, '0')}`
-    : '#ffffff';
-  const textColor = tg?.themeParams?.text_color
-    ? `#${tg.themeParams.text_color.toString(16).padStart(6, '0')}`
-    : '#000000';
-  const btnColor = tg?.themeParams?.button_color
-    ? `#${tg.themeParams.button_color.toString(16).padStart(6, '0')}`
-    : '#3390ec';
-  const secBgColor = tg?.themeParams?.secondary_bg_color
-    ? `#${tg.themeParams.secondary_bg_color.toString(16).padStart(6, '0')}`
-    : '#f4f4f5';
+  // themeParams colors are already hex strings like "#ffffff"
+  const bgColor = tg?.themeParams?.bg_color || '#ffffff';
+  const textColor = tg?.themeParams?.text_color || '#000000';
+  const btnColor = tg?.themeParams?.button_color || '#3390ec';
+  const secBgColor = tg?.themeParams?.secondary_bg_color || '#f4f4f5';
 
   return (
     <ErrorBoundary>

@@ -720,14 +720,30 @@ async def health():
 # ── Catch-all: serve React SPA ─────────────────────────────────-
 FRONTEND_DIR = Path(__file__).resolve().parent / "mini_app" / "frontend" / "dist"
 
+logger.info(f"Frontend dir: {FRONTEND_DIR}")
+logger.info(f"Frontend exists: {FRONTEND_DIR.exists()}")
+
 # Mount static assets (JS, CSS, images) BEFORE the catch-all
 if FRONTEND_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="static-assets")
+    assets_dir = FRONTEND_DIR / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="static-assets")
+        logger.info(f"Static assets mounted from {assets_dir}")
+    else:
+        logger.error(f"Assets directory NOT FOUND: {assets_dir}")
+else:
+    logger.error(f"Frontend dist NOT FOUND: {FRONTEND_DIR}")
+    logger.error("Run: cd mini_app/frontend && npm install && npm run build")
 
 
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
     """Serve React SPA for all non-API routes."""
+    if not FRONTEND_DIR.exists():
+        return JSONResponse(
+            {"error": "Frontend not built. Run: cd mini_app/frontend && npm install && npm run build"},
+            status_code=503,
+        )
     # Try to serve exact file first (favicon, manifest, etc.)
     file_path = FRONTEND_DIR / full_path
     if full_path and file_path.exists() and file_path.is_file():
@@ -736,4 +752,4 @@ async def serve_spa(full_path: str):
     index = FRONTEND_DIR / "index.html"
     if index.exists():
         return FileResponse(str(index))
-    return JSONResponse({"error": "Frontend not built. Run: cd mini_app/frontend && npm run build"}, status_code=500)
+    return JSONResponse({"error": "index.html not found in dist"}, status_code=500)

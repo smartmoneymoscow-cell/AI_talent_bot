@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api, getTelegramUser } from './api';
 
 const AppContext = createContext(null);
@@ -7,34 +7,57 @@ export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tgUser, setTgUser] = useState(null);
+  const initDone = useRef(false);
 
   useEffect(() => {
+    if (initDone.current) return;
+    initDone.current = true;
+
     function initTG() {
       try {
         const tg = window.Telegram?.WebApp;
-        if (tg) { tg.ready(); tg.expand(); }
-      } catch (e) { console.warn('TG init:', e); }
-      try { setTgUser(getTelegramUser()); } catch (e) {}
+        if (tg && typeof tg.ready === 'function') {
+          tg.ready();
+          tg.expand();
+        }
+      } catch (e) {
+        console.warn('TG init error:', e);
+      }
+      try {
+        const u = getTelegramUser();
+        if (u) setTgUser(u);
+      } catch (e) {
+        console.warn('TG user parse error:', e);
+      }
     }
 
     // SDK may load async — wait for it
     if (window.Telegram?.WebApp) {
       initTG();
     } else {
-      window.addEventListener('telegram-web-app-ready', initTG);
-      // Fallback: try again after SDK script loads
       const checkInterval = setInterval(() => {
         if (window.Telegram?.WebApp) {
           clearInterval(checkInterval);
           initTG();
         }
-      }, 100);
-      setTimeout(() => clearInterval(checkInterval), 5000);
+      }, 200);
+      // Stop checking after 8s, proceed without SDK
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!window.Telegram?.WebApp) {
+          console.warn('Telegram SDK not loaded, continuing without it');
+        }
+      }, 8000);
     }
 
-    const timeout = setTimeout(() => setLoading(false), 5000);
-    loadUser().finally(() => clearTimeout(timeout));
-    return () => clearTimeout(timeout);
+    // Load user with a max 6s timeout for loading state
+    const loadingTimeout = setTimeout(() => setLoading(false), 6000);
+    loadUser().finally(() => {
+      clearTimeout(loadingTimeout);
+      setLoading(false);
+    });
+
+    return () => clearTimeout(loadingTimeout);
   }, []);
 
   async function loadUser() {
